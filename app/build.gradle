@@ -1,0 +1,52 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.d410w.portablechess'
+    compileSdk 34 // Target Android API level for compilation
+
+    defaultConfig {
+        applicationId 'com.d410w.portablechess'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    buildTypes {
+        release {
+            // Settings for the release build, typically for Google Play distribution
+            // Enables code shrinking and obfuscation
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            // Settings for the debug build, used during development
+            // Debug builds are signed with a default debug key
+        }
+    }
+
+    // Java compatibility settings
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Manages external libraries and other module dependencies
+dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.24')
+    // AndroidX libraries
+    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // Testing dependencies
+//    testImplementation 'junit:junit:4.13.2'
+//    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+//    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
