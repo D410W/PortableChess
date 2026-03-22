@@ -4,10 +4,12 @@
     <application
             android:allowBackup="true"
             android:label="Portable Chess"
+            android:icon="@mipmap/icon"
+            android:roundIcon="@mipmap/icon_round"
             android:supportsRtl="true"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark">
+            android:theme="@style/Theme.AppCompat.NoActionBar">
         <activity
-                android:name=".MainActivity"
+                android:name=".ui.MainActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
