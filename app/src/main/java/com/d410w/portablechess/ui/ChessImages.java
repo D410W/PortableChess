@@ -10,12 +10,12 @@ import java.util.Vector;
 
 import static java.lang.Math.min;
 
-public class PiecesImages {
+public class ChessImages {
 
     Vector<Bitmap> unsized_images;
     Vector<Bitmap> images;
 
-    PiecesImages(Context context) {
+    ChessImages(Context context) {
         unsized_images = new Vector<>();
         images = new Vector<>();
 
