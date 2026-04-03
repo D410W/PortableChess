@@ -24,9 +24,11 @@ public class MainActivity extends AppCompatActivity implements BoardCallback {
 
     @Override
     public void selectedPiece(ChessPiece p) {
-        System.out.println("index: " + p.x_pos + p.y_pos * 8);
-        canvas.square_highlighted[p.x_pos + p.y_pos * 8] = true;
-        ArrayList<Integer> highlights = board_state.getValidFromPiece(p);
+        System.out.println("index: " + (p.x_pos + p.y_pos * 8));
+
+        canvas.is_highlighted[p.x_pos + p.y_pos * 8] = true;
+
+        ArrayList<Integer> highlights = board_state.getMovesFromPiece(p);
         canvas.highlightSquares(highlights);
         canvas.invalidate();
     }
