@@ -90,13 +90,13 @@ public class ChessPieceCollection implements Iterable<ChessPiece>, Cloneable {
         try {
             ChessPieceCollection clone = (ChessPieceCollection) super.clone();
 
-            clone.pieces_placed = new ArrayList<>(pieces_placed.size());
+            clone.pieces_placed = new ArrayList<>(Collections.nCopies(pieces_placed.size(), null));
             for (int i = 0; i < pieces_placed.size(); ++i) {
                 if (pieces_placed.get(i) == null) continue;
 
                 clone.pieces_placed.set(i, pieces_placed.get(i).clone());
             }
-            clone.pieces_unordered = new ArrayList<>(pieces_unordered.size());
+            clone.pieces_unordered = new ArrayList<>(Collections.nCopies(pieces_unordered.size(), null));
             for (int i = 0; i < pieces_unordered.size(); ++i) {
                 clone.pieces_unordered.set(i, pieces_unordered.get(i).clone());
             }
