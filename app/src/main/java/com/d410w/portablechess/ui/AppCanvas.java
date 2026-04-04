@@ -7,6 +7,7 @@ import android.view.View;
 import com.d410w.portablechess.engine.ChessPiece;
 import com.d410w.portablechess.engine.ChessPieceCollection;
 import com.d410w.portablechess.engine.PieceEvent;
+import com.d410w.portablechess.engine.PieceType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -116,6 +117,10 @@ public class AppCanvas extends View {
                 break;
         }
         return super.onTouchEvent(event);
+    }
+
+    public PieceType getPromotionChoice() {
+        return PieceType.QUEEN;
     }
 
     public void updateChessBackground(int w, int h) {

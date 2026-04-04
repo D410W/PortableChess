@@ -56,6 +56,18 @@ public class ChessPieceCollection implements Iterable<ChessPiece>, Cloneable {
             return pieces_placed.get(idx).clone();
     }
 
+    public ChessPiece getRefAt(Pair<Integer, Integer> pos) {
+        return getRefAt(pos.first + pos.second * width);
+    }
+
+    public ChessPiece getRefAt(int x, int y) {
+        return getRefAt(x + y * width);
+    }
+
+    public ChessPiece getRefAt(int idx) {
+        return pieces_placed.get(idx);
+    }
+
     public ChessPiece getKing(PieceColor king_color) {
         for (ChessPiece p : pieces_unordered) {
             if (p.type == PieceType.KING && p.color == king_color)

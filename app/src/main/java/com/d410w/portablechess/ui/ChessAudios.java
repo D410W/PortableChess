@@ -10,6 +10,7 @@ public class ChessAudios {
 
     SoundPool sound_pool;
     int move_sound_id;
+    int capture_sound_id;
     boolean is_loaded = false;
 
     public ChessAudios(Context context) {
@@ -30,6 +31,7 @@ public class ChessAudios {
         });
 
         move_sound_id = sound_pool.load(context, R.raw.move, 1);
+        capture_sound_id = sound_pool.load(context, R.raw.capture, 1);
     }
 
     public void playSound(PieceEvent event) {
@@ -37,6 +39,10 @@ public class ChessAudios {
 
         if (event == PieceEvent.MOVE_SELF) {
             sound_pool.play(move_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
+        } else if (event == PieceEvent.CASTLE) {
+            sound_pool.play(move_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
+        } else if (event == PieceEvent.CAPTURE) {
+            sound_pool.play(capture_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
         }
     }
 }

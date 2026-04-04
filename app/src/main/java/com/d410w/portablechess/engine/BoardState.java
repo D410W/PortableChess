@@ -111,7 +111,7 @@ public class BoardState {
         for (Pair<Integer, Integer> pos : piece.normalMoves()) {
             if (!isInsideBoard(pos)) continue;
             if (pieces.getAt(pos.first + pos.second * width) != null &&
-                pieces.getAt(pos.first + pos.second * width).color == piece.color) continue;
+                    pieces.getAt(pos.first + pos.second * width).color == piece.color) continue;
 
             valid.add(pos.first + pos.second * width);
         }
@@ -126,7 +126,7 @@ public class BoardState {
         for (Pair<Integer, Integer> pos : piece.attackMoves()) {
             if (!isInsideBoard(pos)) continue;
             if (pieces.getAt(pos.first + pos.second * width) != null &&
-                pieces.getAt(pos.first + pos.second * width).color != piece.color) {
+                    pieces.getAt(pos.first + pos.second * width).color != piece.color) {
 
                 valid.add(pos.first + pos.second * width);
             }
@@ -139,7 +139,7 @@ public class BoardState {
             }
 
         if (piece.type == PieceType.KING)
-            for (Pair<Integer, Integer> pos : piece.casltingMoves(attackingSquares(piece.color.opposite()), pieces)) {
+            for (Pair<Integer, Integer> pos : piece.castlingMoves(attackingSquares(piece.color.opposite()), pieces)) {
                 if (!isInsideBoard(pos)) continue;
                 valid.add(pos.first + pos.second * width);
             }
@@ -156,19 +156,20 @@ public class BoardState {
         ArrayList<Integer> valid = getMovesHelper(p);
 
         // checking if resulting move leaves the king in danger
-        valid.removeIf(idx -> {
-            BoardSimulation sim = new BoardSimulation(this);
+        if (pieces.getKing(p.color) != null)
+            valid.removeIf(idx -> {
+                BoardSimulation sim = new BoardSimulation(this);
 
-            ChessPiece actual = sim.pieces.getAt(p.posPair());
-            sim.pieces.remove(actual.posPair());
-            actual.x_pos = idx % width;
-            actual.y_pos = idx / width;
-            sim.pieces.add(actual);
+                ChessPiece actual = sim.pieces.getAt(p.posPair());
+                sim.pieces.remove(actual.posPair());
+                actual.x_pos = idx % width;
+                actual.y_pos = idx / width;
+                sim.pieces.add(actual);
 
-            ArrayList<Pair<Integer, Integer>> attacking = sim.attackingSquares(actual.color.opposite());
+                ArrayList<Pair<Integer, Integer>> attacking = sim.attackingSquares(actual.color.opposite());
 
-            return attacking.contains(sim.pieces.getKing(actual.color).posPair());
-        });
+                return attacking.contains(sim.pieces.getKing(actual.color).posPair());
+            });
 
         if (p.type == PieceType.KING) {
             ArrayList<Pair<Integer, Integer>> attacking = attackingSquares(p.color.opposite());
@@ -199,6 +200,8 @@ public class BoardState {
     }
 
     public PieceEvent movePiece(ChessPiece piece, int x_pos, int y_pos) {
+        PieceEvent event = PieceEvent.MOVE_SELF;
+
         // checking if was en passant
         if (piece.type == PieceType.PAWN &&
                 piece.enPassantMoves(pieces.en_passant_pawn).contains(Pair.create(x_pos, y_pos))) {
@@ -208,15 +211,24 @@ public class BoardState {
 
         // checking if was castle
         if (piece.type == PieceType.KING &&
-            piece.casltingMoves(attackingSquares(piece.color.opposite()), pieces).contains(Pair.create(x_pos, y_pos))) {
-            System.out.println("cASTLINGgGG");
+                piece.castlingMoves(attackingSquares(piece.color.opposite()), pieces).contains(Pair.create(x_pos, y_pos))) {
+            event = PieceEvent.CASTLE;
             // moving rook to correct position
             if (x_pos == 6) { // right side
-                System.out.println("YEAHH");
                 movePiece(pieces.getAt(7, y_pos), 5, y_pos);
             } else if (x_pos == 2) { // left side
                 movePiece(pieces.getAt(0, y_pos), 3, y_pos);
             }
+        }
+
+        // checking if was attack
+        if (pieces.getAt(x_pos, y_pos) != null) {
+            event = PieceEvent.CAPTURE;
+        }
+
+        // checking if was promotion
+        if (piece.type == PieceType.PAWN && (y_pos == 0 || y_pos == 7)){
+            event = PieceEvent.PROMOTE;
         }
 
         piece.moved = true;
@@ -233,7 +245,11 @@ public class BoardState {
         piece.x_pos = x_pos;
         piece.y_pos = y_pos;
 
-        pieces.add(piece);
-        return PieceEvent.MOVE_SELF;
+        pieces.add(piece.clone());
+        return event;
+    }
+
+    public void promotePiece(int x_pos, int y_pos, PieceType type) {
+        pieces.getRefAt(x_pos, y_pos).type = type;
     }
 }

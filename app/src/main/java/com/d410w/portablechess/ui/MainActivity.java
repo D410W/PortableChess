@@ -39,6 +39,9 @@ public class MainActivity extends AppCompatActivity implements BoardCallback {
             return;
 
         PieceEvent event = board_state.movePiece(start, x_pos, y_pos);
+        if (event == PieceEvent.PROMOTE) {
+            board_state.promotePiece(x_pos, y_pos, canvas.getPromotionChoice());
+        }
         canvas.setPieces(board_state.getPieces(), event);
     }
 }

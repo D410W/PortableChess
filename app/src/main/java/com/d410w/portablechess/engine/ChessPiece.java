@@ -125,11 +125,12 @@ public class ChessPiece implements Cloneable {
         return possible;
     }
 
-    public ArrayList<Pair<Integer, Integer>> casltingMoves(ArrayList<Pair<Integer, Integer>> attacking_squares, ChessPieceCollection pieces) { // castling
+    public ArrayList<Pair<Integer, Integer>> castlingMoves(ArrayList<Pair<Integer, Integer>> attacking_squares, ChessPieceCollection pieces) { // castling
         ArrayList<Pair<Integer, Integer>> possible = new ArrayList<>();
 
         if (type != PieceType.KING) return possible;
         if (moved) return possible;
+        if (attacking_squares.contains(Pair.create(x_pos, y_pos))) return possible;
 
         // right side
         if (pieces.getAt(7, y_pos).type == PieceType.ROOK && !pieces.getAt(7, y_pos).moved) {
