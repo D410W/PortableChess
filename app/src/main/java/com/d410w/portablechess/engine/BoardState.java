@@ -5,10 +5,12 @@ import android.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.Math.abs;
+
 public class BoardState {
     ChessPieceCollection pieces;
-    int width = 8;
-    int height = 8;
+    int width;
+    int height;
 
     final ArrayList<Pair<Integer, Integer>> diagonal_dirs;
     final ArrayList<Pair<Integer, Integer>> parallel_dirs;
@@ -64,17 +66,57 @@ public class BoardState {
         return list;
     }
 
+    private ArrayList<Pair<Integer, Integer>> iterativeMoves(ChessPiece piece) {
+        ArrayList<Pair<Integer, Integer>> valid = new ArrayList<>();
+
+        for (Pair<Integer, Integer> dir : parallel_dirs) {
+            ChessPiece helper = piece.clone();
+            for (int i = 0; i != piece.horizontalRange(); ++i) {
+                helper.addOffset(dir);
+
+                if (!isInsideBoard(helper)) break;
+
+                if (pieces.getAt(helper.posPair()) != null) {
+                    if (pieces.getAt(helper.posPair()).color != piece.color)
+                        valid.add(helper.posPair());
+                    break;
+                }
+
+                valid.add(helper.posPair());
+            }
+        }
+        for (Pair<Integer, Integer> dir : diagonal_dirs) {
+            ChessPiece helper = piece.clone();
+            for (int i = 0; i != piece.diagonalRange(); ++i) {
+                helper.addOffset(dir);
+
+                if (!isInsideBoard(helper)) break;
+
+                if (pieces.getAt(helper.posPair()) != null) {
+                    if (pieces.getAt(helper.posPair()).color != piece.color)
+                        valid.add(helper.posPair());
+                    break;
+                }
+
+                valid.add(helper.posPair());
+            }
+        }
+
+        return valid;
+    }
+
     private ArrayList<Integer> getMovesHelper(ChessPiece piece) {
         ArrayList<Integer> valid = new ArrayList<>();
 
-        for (Pair<Integer, Integer> pos : piece.extraMoves()) {
+        for (Pair<Integer, Integer> pos : piece.normalMoves()) {
             if (!isInsideBoard(pos)) continue;
             if (pieces.getAt(pos.first + pos.second * width) != null &&
                 pieces.getAt(pos.first + pos.second * width).color == piece.color) continue;
 
             valid.add(pos.first + pos.second * width);
         }
-        for (Pair<Integer, Integer> pos : piece.noAttackMoves()) {
+
+        for (Pair<Integer, Integer> pos : piece.noAttackMoves(pieces)) {
             if (!isInsideBoard(pos)) continue;
             if (pieces.getAt(pos.first + pos.second * width) != null) continue;
 
@@ -90,37 +132,21 @@ public class BoardState {
             }
         }
 
-        for (Pair<Integer, Integer> dir : parallel_dirs) {
-            ChessPiece helper = piece.clone();
-            for (int i = 0; i != piece.horizontalRange(); ++i) {
-                helper.addOffset(dir);
-
-                if (!isInsideBoard(helper)) break;
-
-                if (pieces.getAt(helper.posPair()) != null) {
-                    if (pieces.getAt(helper.posPair()).color != piece.color)
-                        valid.add(helper.posInt(width));
-                    break;
-                }
-
-                valid.add(helper.posInt(width));
+        if (piece.type == PieceType.PAWN)
+            for (Pair<Integer, Integer> pos : piece.enPassantMoves(pieces.en_passant_pawn)) {
+                if (!isInsideBoard(pos)) continue;
+                valid.add(pos.first + pos.second * width);
             }
-        }
-        for (Pair<Integer, Integer> dir : diagonal_dirs) {
-            ChessPiece helper = piece.clone();
-            for (int i = 0; i != piece.diagonalRange(); ++i) {
-                helper.addOffset(dir);
 
-                if (!isInsideBoard(helper)) break;
-
-                if (pieces.getAt(helper.posPair()) != null) {
-                    if (pieces.getAt(helper.posPair()).color != piece.color)
-                        valid.add(helper.posInt(width));
-                    break;
-                }
-
-                valid.add(helper.posInt(width));
+        if (piece.type == PieceType.KING)
+            for (Pair<Integer, Integer> pos : piece.casltingMoves(attackingSquares(piece.color.opposite()), pieces)) {
+                if (!isInsideBoard(pos)) continue;
+                valid.add(pos.first + pos.second * width);
             }
+
+        for (Pair<Integer, Integer> pos : iterativeMoves(piece)) {
+            if (!isInsideBoard(pos)) continue;
+            valid.add(pos.first + pos.second * width);
         }
 
         return valid;
@@ -128,6 +154,26 @@ public class BoardState {
 
     public ArrayList<Integer> getMovesFromPiece(ChessPiece p) {
         ArrayList<Integer> valid = getMovesHelper(p);
+
+        // checking if resulting move leaves the king in danger
+        valid.removeIf(idx -> {
+            BoardSimulation sim = new BoardSimulation(this);
+
+            ChessPiece actual = sim.pieces.getAt(p.posPair());
+            sim.pieces.remove(actual.posPair());
+            actual.x_pos = idx % width;
+            actual.y_pos = idx / width;
+            sim.pieces.add(actual);
+
+            ArrayList<Pair<Integer, Integer>> attacking = sim.attackingSquares(actual.color.opposite());
+
+            return attacking.contains(sim.pieces.getKing(actual.color).posPair());
+        });
+
+        if (p.type == PieceType.KING) {
+            ArrayList<Pair<Integer, Integer>> attacking = attackingSquares(p.color.opposite());
+            valid.removeIf(idx -> attacking.contains(Pair.create(idx % width, idx / width)));
+        }
 
         return valid;
     }
@@ -138,15 +184,56 @@ public class BoardState {
         return possible.contains(x_pos + y_pos * width);
     }
 
+    public ArrayList<Pair<Integer, Integer>> attackingSquares(PieceColor color) {
+        ArrayList<Pair<Integer, Integer>> attacking = new ArrayList<>();
+
+        for (ChessPiece p : pieces) {
+            if (p.color == color) {
+                attacking.addAll(p.attackMoves());
+                attacking.addAll(p.normalMoves());
+                attacking.addAll(iterativeMoves(p));
+            }
+        }
+
+        return attacking;
+    }
+
     public PieceEvent movePiece(ChessPiece piece, int x_pos, int y_pos) {
+        // checking if was en passant
+        if (piece.type == PieceType.PAWN &&
+                piece.enPassantMoves(pieces.en_passant_pawn).contains(Pair.create(x_pos, y_pos))) {
+            // removing en passant-ed pawn
+            pieces.remove(x_pos, piece.y_pos);
+        }
+
+        // checking if was castle
+        if (piece.type == PieceType.KING &&
+            piece.casltingMoves(attackingSquares(piece.color.opposite()), pieces).contains(Pair.create(x_pos, y_pos))) {
+            System.out.println("cASTLINGgGG");
+            // moving rook to correct position
+            if (x_pos == 6) { // right side
+                System.out.println("YEAHH");
+                movePiece(pieces.getAt(7, y_pos), 5, y_pos);
+            } else if (x_pos == 2) { // left side
+                movePiece(pieces.getAt(0, y_pos), 3, y_pos);
+            }
+        }
+
+        piece.moved = true;
+
+        // updating en_passant_pawn of ChessPieceCollection
+        pieces.en_passant_pawn = null;
+        if (piece.type == PieceType.PAWN && abs(piece.y_pos - y_pos) == 2) {
+            pieces.en_passant_pawn = piece;
+        }
+
         int old_pos = piece.y_pos * width + piece.x_pos;
-        ChessPiece temp = pieces.getAt(old_pos);
         pieces.remove(old_pos);
 
-        temp.x_pos = x_pos;
-        temp.y_pos = y_pos;
+        piece.x_pos = x_pos;
+        piece.y_pos = y_pos;
 
-        pieces.add(temp);
+        pieces.add(piece);
         return PieceEvent.MOVE_SELF;
     }
 }
