@@ -38,10 +38,10 @@ public class ChessPiece implements Cloneable {
     }
 
     public boolean isInsideBoard(int b_width, int b_height) {
-        boolean x = 0 <= x_pos && x_pos < b_width;
-        boolean y = 0 <= y_pos && y_pos < b_height;
+        boolean inx = 0 <= x_pos && x_pos < b_width;
+        boolean iny = 0 <= y_pos && y_pos < b_height;
 
-        return x && y;
+        return inx && iny;
     }
 
     public int horizontalRange() {
@@ -133,13 +133,15 @@ public class ChessPiece implements Cloneable {
         if (attacking_squares.contains(Pair.create(x_pos, y_pos))) return possible;
 
         // right side
-        if (pieces.getAt(7, y_pos).type == PieceType.ROOK && !pieces.getAt(7, y_pos).moved) {
+        ChessPiece rook = pieces.getRefAt(7, y_pos);
+        if (rook != null && rook.type == PieceType.ROOK && !rook.moved) {
             if (pieces.getAt(5, y_pos) == null && pieces.getAt(6, y_pos) == null)
                 if (!attacking_squares.contains(Pair.create(5, y_pos)) && !attacking_squares.contains(Pair.create(6, y_pos)))
                     possible.add(Pair.create(6, y_pos));
         }
         // left side
-        if (pieces.getAt(0, y_pos).type == PieceType.ROOK && !pieces.getAt(0, y_pos).moved) {
+        rook = pieces.getRefAt(0, y_pos);
+        if (rook != null && rook.type == PieceType.ROOK && !rook.moved) {
             if (pieces.getAt(3, y_pos) == null && pieces.getAt(2, y_pos) == null)
                 if (!attacking_squares.contains(Pair.create(3, y_pos)) && !attacking_squares.contains(Pair.create(2, y_pos)))
                     possible.add(Pair.create(2, y_pos));

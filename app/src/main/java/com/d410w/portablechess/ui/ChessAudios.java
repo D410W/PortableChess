@@ -35,14 +35,12 @@ public class ChessAudios {
     }
 
     public void playSound(PieceEvent event) {
-        if (!is_loaded) return;
+        if (!is_loaded || event == PieceEvent.NONE) return;
 
-        if (event == PieceEvent.MOVE_SELF) {
-            sound_pool.play(move_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
-        } else if (event == PieceEvent.CASTLE) {
-            sound_pool.play(move_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
-        } else if (event == PieceEvent.CAPTURE) {
+        if (event.isCapture()) {
             sound_pool.play(capture_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
+        } else {
+            sound_pool.play(move_sound_id, 1.0f, 1.0f, 1, 0, 1.0f);
         }
     }
 }

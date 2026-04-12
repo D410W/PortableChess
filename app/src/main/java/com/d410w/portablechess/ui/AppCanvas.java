@@ -2,12 +2,11 @@ package com.d410w.portablechess.ui;
 
 import android.content.Context;
 import android.graphics.*;
+import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import com.d410w.portablechess.engine.ChessPiece;
-import com.d410w.portablechess.engine.ChessPieceCollection;
-import com.d410w.portablechess.engine.PieceEvent;
-import com.d410w.portablechess.engine.PieceType;
+import androidx.annotation.Nullable;
+import com.d410w.portablechess.engine.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -39,16 +38,22 @@ public class AppCanvas extends View {
     // main activity
     BoardCallback boardcallback;
 
+    public AppCanvas(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        init(context);
+    }
+
     public AppCanvas(Context context) {
         super(context);
+        init(context);
+    }
 
+    public void init(Context context) {
         // pieces info
         pieces_info = new ChessPieceCollection(8, 8);
         selected_piece = null;
 
-        // pieces drawing
-        squares = new Rect[64];
-        is_highlighted = new boolean[64];
+        // pieces-related
         chess_images = new ChessImages(context);
         chess_audios = new ChessAudios(context);
 
@@ -65,6 +70,10 @@ public class AppCanvas extends View {
         // main activity
         boardcallback = (BoardCallback)context;
 
+        // board
+        is_highlighted = new boolean[64];
+        board = new Rect();
+        squares = new Rect[64];
         for (int i = 0; i < 64; ++i) {
             squares[i] = new Rect();
             is_highlighted[i] = false;
@@ -98,7 +107,10 @@ public class AppCanvas extends View {
         } else { // has a piece. probably wants to move
             for (int i = 0; i < squares.length; ++i) {
                 if (squares[i].contains((int) x, (int) y)) {
-                    boardcallback.movedPiece(selected_piece, i%8, i/8);
+                    boardcallback.movedPiece( new ChessMove(
+                        selected_piece.x_pos, selected_piece.y_pos,
+                        i % 8, i / 8
+                    ));
                     break;
                 }
             }
@@ -157,6 +169,12 @@ public class AppCanvas extends View {
             is_highlighted[i] = false;
         }
         this.invalidate();
+    }
+
+    public void unselectPiece() {
+        selected_piece = null;
+        unHighlightSquares();
+        invalidate();
     }
 
     public void drawChessBackground(@NotNull Canvas canvas) {

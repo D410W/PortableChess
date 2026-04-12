@@ -1,7 +1,6 @@
 package com.d410w.portablechess.engine;
 
 import android.util.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,9 +14,15 @@ public class BoardState {
     final ArrayList<Pair<Integer, Integer>> diagonal_dirs;
     final ArrayList<Pair<Integer, Integer>> parallel_dirs;
 
+    ArrayList<ChessMove> history;
+    int history_pos;
+
     public BoardState(int b_width, int b_height) {
         diagonal_dirs = new ArrayList<>(List.of(Pair.create(1,1), Pair.create(-1,1), Pair.create(1,-1), Pair.create(-1,-1)));
         parallel_dirs = new ArrayList<>(List.of(Pair.create(1,0), Pair.create(-1,0), Pair.create(0,1), Pair.create(0,-1)));
+
+        history = new ArrayList<>();
+        history_pos = -1;
 
         width = b_width;
         height = b_height;
@@ -42,6 +47,73 @@ public class BoardState {
         }
     }
 
+    private void addHistory(ChessMove move) {
+        ++history_pos;
+
+        if (history.size() < history_pos + 1) {
+            history.add(move);
+        } else {
+            history.set(history_pos, move);
+
+            while (history.size() > history_pos + 1) {
+                history.remove(history.size() - 1);
+            }
+        }
+    }
+
+    public boolean undoMove() {
+        if (history.isEmpty() || history_pos < 0)
+            return false;
+
+        ChessMove last = history.get(history_pos);
+        System.out.println(last);
+        if (last.event.isPromotion()) {
+            // todo
+        } else if (last.event == PieceEvent.CASTLE) {
+            // todo
+        } else {
+            ChessPiece piece = pieces.getRefAt(last.end());
+            pieces.remove(last.end());
+
+            if (last.getCaptured() != null)
+                pieces.add(last.getCaptured());
+
+            piece.x_pos = last.start_x;
+            piece.y_pos = last.start_y;
+            piece.moved = last.was_moved;
+
+            pieces.add(piece);
+        }
+
+        --history_pos;
+        return true;
+    }
+    
+    public PieceEvent redoMove() {
+        if (history_pos >= history.size() - 1)
+            return PieceEvent.NONE;
+        
+        ChessMove next = history.get(history_pos + 1);
+
+        if (next.event.isPromotion()) {
+            // todo
+        } else if (next.event == PieceEvent.CASTLE) {
+            // todo
+        } else {
+            ChessPiece piece = pieces.getRefAt(next.start());
+            pieces.remove(next.start());
+
+            piece.x_pos = next.end_x;
+            piece.y_pos = next.end_y;
+            piece.moved = true;
+
+            pieces.add(piece);
+        }
+        
+        ++history_pos;
+        return next.event;
+    }
+
     private void addPiece(ChessPiece p) {
         pieces.add(p);
     }
@@ -52,6 +124,7 @@ public class BoardState {
 
         return x && y;
     }
+
     private boolean isInsideBoard(ChessPiece piece) {
         boolean x = 0 <= piece.x_pos && piece.x_pos < width;
         boolean y = 0 <= piece.y_pos && piece.y_pos < height;
@@ -133,7 +206,7 @@ public class BoardState {
         }
 
         if (piece.type == PieceType.PAWN)
-            for (Pair<Integer, Integer> pos : piece.enPassantMoves(pieces.en_passant_pawn)) {
+            for (Pair<Integer, Integer> pos : piece.enPassantMoves(pieces.en_passantable_pawn)) {
                 if (!isInsideBoard(pos)) continue;
                 valid.add(pos.first + pos.second * width);
             }
@@ -185,6 +258,14 @@ public class BoardState {
         return possible.contains(x_pos + y_pos * width);
     }
 
+    public boolean isValid(ChessPiece piece, Pair<Integer, Integer> end) {
+        return isValid(piece, end.first, end.second);
+    }
+
+    public boolean isValid(ChessMove move) {
+        return isValid(pieces.getAt(move.start()), move.end());
+    }
+
     public ArrayList<Pair<Integer, Integer>> attackingSquares(PieceColor color) {
         ArrayList<Pair<Integer, Integer>> attacking = new ArrayList<>();
 
@@ -199,57 +280,77 @@ public class BoardState {
         return attacking;
     }
 
-    public PieceEvent movePiece(ChessPiece piece, int x_pos, int y_pos) {
-        PieceEvent event = PieceEvent.MOVE_SELF;
+    public PieceEvent movePiece(ChessMove move) {
+        PieceEvent event = PieceEvent.MOVE;
+        ChessPiece piece = pieces.getAt(move.start());
+        ChessPiece removed = null;
+        boolean was_moved = piece.moved;
 
         // checking if was en passant
         if (piece.type == PieceType.PAWN &&
-                piece.enPassantMoves(pieces.en_passant_pawn).contains(Pair.create(x_pos, y_pos))) {
+                piece.enPassantMoves(pieces.en_passantable_pawn).contains(move.end())) {
             // removing en passant-ed pawn
-            pieces.remove(x_pos, piece.y_pos);
+            removed = pieces.getAt(move.end_x, move.start_y);
+            pieces.remove(removed.posPair());
         }
 
-        // checking if was castle
+        // checking if castled
         if (piece.type == PieceType.KING &&
-                piece.castlingMoves(attackingSquares(piece.color.opposite()), pieces).contains(Pair.create(x_pos, y_pos))) {
+                piece.castlingMoves(attackingSquares(piece.color.opposite()), pieces).contains(move.end())) {
             event = PieceEvent.CASTLE;
             // moving rook to correct position
-            if (x_pos == 6) { // right side
-                movePiece(pieces.getAt(7, y_pos), 5, y_pos);
-            } else if (x_pos == 2) { // left side
-                movePiece(pieces.getAt(0, y_pos), 3, y_pos);
+            if (move.end_x == 6) { // right side
+                movePiece(pieces.getAt(7, move.end_y), 5, move.end_y);
+            } else if (move.end_x == 2) { // left side
+                movePiece(pieces.getAt(0, move.end_y), 3, move.end_y);
             }
         }
 
         // checking if was attack
-        if (pieces.getAt(x_pos, y_pos) != null) {
+        if (pieces.getAt(move.end()) != null) {
+            removed = pieces.getAt(move.end());
             event = PieceEvent.CAPTURE;
         }
 
         // checking if was promotion
-        if (piece.type == PieceType.PAWN && (y_pos == 0 || y_pos == 7)){
-            event = PieceEvent.PROMOTE;
+        if (piece.type == PieceType.PAWN && (move.end_y == 0 || move.end_y == 7)){
+            event = event.promote();
         }
 
         piece.moved = true;
 
-        // updating en_passant_pawn of ChessPieceCollection
-        pieces.en_passant_pawn = null;
-        if (piece.type == PieceType.PAWN && abs(piece.y_pos - y_pos) == 2) {
-            pieces.en_passant_pawn = piece;
+        // updating en_passantable_pawn of ChessPieceCollection
+        pieces.en_passantable_pawn = null;
+        if (piece.type == PieceType.PAWN && abs(move.start_y - move.end_y) == 2) {
+            pieces.en_passantable_pawn = piece;
         }
 
-        int old_pos = piece.y_pos * width + piece.x_pos;
-        pieces.remove(old_pos);
+        pieces.remove(move.start());
 
-        piece.x_pos = x_pos;
-        piece.y_pos = y_pos;
+        piece.x_pos = move.end_x;
+        piece.y_pos = move.end_y;
 
         pieces.add(piece.clone());
+
+        move.setInfo(removed, event, was_moved);
+        addHistory(move);
         return event;
+    }
+
+    public PieceEvent movePiece(ChessPiece piece, int x_pos, int y_pos) {
+        ChessMove move = new ChessMove(piece.x_pos, piece.y_pos, x_pos, y_pos);
+        return movePiece(move);
+    }
+
+    public PieceEvent movePiece(ChessPiece piece, Pair<Integer, Integer> end) {
+        return movePiece(piece, end.first, end.second);
     }
 
     public void promotePiece(int x_pos, int y_pos, PieceType type) {
         pieces.getRefAt(x_pos, y_pos).type = type;
+    }
+
+    public void promotePiece(Pair<Integer, Integer> pos, PieceType type) {
+        promotePiece(pos.first, pos.second, type);
     }
 }

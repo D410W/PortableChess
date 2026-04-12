@@ -10,14 +10,14 @@ public class ChessPieceCollection implements Iterable<ChessPiece>, Cloneable {
 
     ArrayList<ChessPiece> pieces_placed;
     ArrayList<ChessPiece> pieces_unordered;
-    ChessPiece en_passant_pawn;
+    ChessPiece en_passantable_pawn;
     int width;
     int height;
 
     public ChessPieceCollection(int width, int height) {
         this.width = width;
         this.height = height;
-        en_passant_pawn = null;
+        en_passantable_pawn = null;
 
         pieces_placed = new ArrayList<>(Collections.nCopies(width * height, null));
         pieces_unordered = new ArrayList<>();
@@ -56,15 +56,15 @@ public class ChessPieceCollection implements Iterable<ChessPiece>, Cloneable {
             return pieces_placed.get(idx).clone();
     }
 
-    public ChessPiece getRefAt(Pair<Integer, Integer> pos) {
+    protected ChessPiece getRefAt(Pair<Integer, Integer> pos) {
         return getRefAt(pos.first + pos.second * width);
     }
 
-    public ChessPiece getRefAt(int x, int y) {
+    protected ChessPiece getRefAt(int x, int y) {
         return getRefAt(x + y * width);
     }
 
-    public ChessPiece getRefAt(int idx) {
+    protected ChessPiece getRefAt(int idx) {
         return pieces_placed.get(idx);
     }
 

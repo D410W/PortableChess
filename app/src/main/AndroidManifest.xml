@@ -7,7 +7,7 @@
             android:icon="@mipmap/icon"
             android:roundIcon="@mipmap/icon_round"
             android:supportsRtl="true"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
+            android:theme="@style/Theme.PortableChess">
         <activity
                 android:name=".ui.MainActivity"
                 android:exported="true">
